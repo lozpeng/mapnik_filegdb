@@ -27,12 +27,27 @@
     <ClInclude Include="filegdb_geodatabase.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="shape_buffer_io.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="fgdb_common.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="filegdb_raster_io.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="filegdb_datasource.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="filegdb_featureset.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="shape_buffer_io.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="filegdb_raster_io.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

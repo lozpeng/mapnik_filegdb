@@ -15,10 +15,20 @@
 #include <mapnik/datasource.hpp>
 #include <mapnik/params.hpp>
 
+#ifdef _WINDOWS
+#include <Windows.h>
+#endif
+
+//中文字符问题
+#include <locale.h>
+#include "fgdb_common.h"
 // namespaces
 using namespace std;
 using namespace FileGDBAPI;
-//ESRI FileGDB share ptr object
+//ESRI FileGDB shared ptr object
+
+
+//文件型数据库连接与管理类
 class filegdb_geodatabase
 {
 	//members
@@ -32,7 +42,7 @@ private:
 	{
 		fgdbError hr;
 		std::wstring wGdbPath;
-		wGdbPath = to_wstring(wGdbPath,gdbPath_);
+		wGdbPath = to_vwstring(wGdbPath,gdbPath_);
 		if ((hr = OpenGeodatabase(wGdbPath, fileGdb_)) != S_OK)
 		{
 			std::ostringstream s;
@@ -44,42 +54,65 @@ private:
 			throw mapnik::datasource_exception (s.str());
 		}
 	}
-	//字符串转码
-	std::string valueOf(std::wstring& str){
-		std::string ss;
-		ss.assign(str.begin(), str.end());
-		return ss;
-	}
-	//字符串转码
-	std::string& to_string(std::string& dest, std::wstring const & src)
-	{
-		//std::setlocale(LC_CTYPE, "");
-
-		size_t const mbs_len = wcstombs(NULL, src.c_str(), 0);
-		std::vector<char> tmp(mbs_len + 1);
-		wcstombs(&tmp[0], src.c_str(), tmp.size());
-
-		dest.assign(tmp.begin(), tmp.end() - 1);
-
-		return dest;
-	}
-	//字符串转码
-	std::wstring& to_wstring(std::wstring& dest, std::string const & src)
-	{
-		//std::setlocale(LC_CTYPE, "");
-		size_t const wcs_len = mbstowcs(NULL, src.c_str(), 0);
-		std::vector<wchar_t> tmp(wcs_len + 1);
-		mbstowcs(&tmp[0], src.c_str(), src.size());
-
-		dest.assign(tmp.begin(), tmp.end() - 1);
-
-		return dest;
-	}
-public :
+public :	
 	//
 	filegdb_geodatabase(std::string const& fileGdbPath):gdbPath_(fileGdbPath)
 	{
 		OpenGdb();
+	}
+	//关闭一个打开的表
+	void close_table(Table& table)
+	{
+		try
+		{
+			fgdbError hr;
+			if((hr=fileGdb_.CloseTable(table)) !=S_OK)
+			{
+				std::ostringstream s;
+				wstring   errorText;
+				ErrorInfo::GetErrorDescription(hr, errorText);
+				std::string ss;
+				ss.assign(errorText.begin(), errorText.end());
+				s << "关闭表时失败:" << ss<<"。数据库路径:"<<gdbPath_<<endl;
+				throw mapnik::datasource_exception (s.str());
+			}
+			else
+			{
+
+			}
+		}
+		catch(...)
+		{
+		
+		}
+	}
+	//打开矢量数据
+	bool open_table(std::string path,Table& table)
+	{
+		try{
+			fgdbError hr;
+			std::wstring wPath ;
+			wPath = to_vwstring(wPath,path);
+			if((hr=fileGdb_.OpenTable(wPath,table)) != S_OK)
+			{
+				std::ostringstream s;
+				wstring   errorText;
+				ErrorInfo::GetErrorDescription(hr, errorText);
+				std::string ss;
+				ss.assign(errorText.begin(), errorText.end());
+				s << "数据表打开失败:" << ss<<"。数据库路径:"<<gdbPath_<<"，打开表路径为:"<<path<<endl;
+				throw mapnik::datasource_exception (s.str());
+			}
+			return true;
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
+	std::string get_dbPath()
+	{
+		return gdbPath_;
 	}
 	~filegdb_geodatabase()
 	{

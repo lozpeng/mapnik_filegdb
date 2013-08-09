@@ -1,71 +1,87 @@
+#include <iostream>
+
 // mapnik
+#include <mapnik/debug.hpp>
 #include <mapnik/feature_factory.hpp>
+#include <mapnik/unicode.hpp>
 #include <mapnik/geometry.hpp>
 
 // boost
 #include <boost/make_shared.hpp>
 
+// file gdb plugin
 #include "filegdb_featureset.hpp"
+#include "shape_buffer_io.hpp"
 
-filegdb_featureset::filegdb_featureset(mapnik::box2d<double> const& box, std::string const& encoding)
-    : box_(box),
-      feature_id_(1),
-      tr_(new mapnik::transcoder(encoding)),
-      ctx_(boost::make_shared<mapnik::context_type>()) { }
+using mapnik::geometry_type;
+using mapnik::feature_factory;
+using mapnik::context_ptr;
 
-filegdb_featureset::~filegdb_featureset() { }
-
-mapnik::feature_ptr filegdb_featureset::next()
+template <typename filterT>
+filegdb_featureset<filterT>::filegdb_featureset(filterT const& filter,
+				box2d<double> const& box,Table* gdbTable,int row_limit,std::string const& encoding)
+		:filter_(filter),
+		row_limit_(row_limit),
+		box_(box),
+		ctx_(boost::make_shared<mapnik::context_type>()),
+		tr_(new transcoder(encoding))
 {
-    if (feature_id_ == 1)
-    {
-        // let us pretend it just has one column/attribute name
-        std::string attribute("key");
-
-        // the featureset context needs to know the field schema
-        ctx_->push(attribute);
-
-        // create a new feature
-        mapnik::feature_ptr feature(mapnik::feature_factory::create(ctx_,feature_id_));
-
-        // increment the count so that we only return one feature
-        ++feature_id_;
-
-        // create an attribute pair of key:value
-        UnicodeString ustr = tr_->transcode("filegdb");
-        feature->put(attribute,ustr);
-
-        // we need a geometry to display so just for fun here
-        // we take the center of the bbox that was used to query
-        // since we don't actually have any data to pull from...
-        mapnik::coord2d center = box_.center();
-
-        // create a new point geometry
-        mapnik::geometry_type * pt = new mapnik::geometry_type(mapnik::Point);
-
-        // we use path type geometries in Mapnik to fit nicely with AGG and Cairo
-        // here we stick an x,y pair into the geometry using move_to()
-        pt->move_to(center.x,center.y);
-
-        // add the geometry to the feature
-        feature->add_geometry(pt);
-
-        // A feature usually will have just one geometry of a given type
-        // but mapnik does support many geometries per feature of any type
-        // so here we draw a line around the point
-        mapnik::geometry_type * line = new mapnik::geometry_type(mapnik::LineString);
-        line->move_to(box_.minx(),box_.miny());
-        line->line_to(box_.minx(),box_.maxy());
-        line->line_to(box_.maxx(),box_.maxy());
-        line->line_to(box_.maxx(),box_.miny());
-        line->line_to(box_.minx(),box_.miny());
-        feature->add_geometry(line);
-
-        // return the feature!
-        return feature;
-    }
-
-    // otherwise return an empty feature
-    return mapnik::feature_ptr();
+	FileGDBAPI::Envelope envelope;
+	envelope.xMin =box_.minx();// -118.219;
+	envelope.yMin =box_.miny();//  22.98;
+	envelope.xMax =box_.maxx();// -117.988;
+	envelope.yMax =box_.maxy();//  34.0;
+	fgdbError hr;
+	//根据条件检索出数据用于获取每一条记录
+	try
+	{
+		hr = gdbTable->Search(L"*", L"", envelope, true, spQueryRows);
+		if (hr != S_OK)
+		{
+			//spQueryRows =NULL;	
+		}
+	}
+	catch(...)
+	{
+		//spQueryRows = NULL;
+	}
+}
+template <typename filterT>
+filegdb_featureset<filterT>::~filegdb_featureset() {
+	try{
+		spQueryRows.Close();
+	}
+	catch(...)
+	{
+	
+	}
 }
 
+//
+template <typename filterT>
+mapnik::feature_ptr filegdb_featureset<filterT>::next()
+{
+	//filter_in_box filter(box_);
+	//如果有查询到的行集
+	fgdbError hr;
+	Row spQueryRow;
+	hr = spQueryRows.Next(spQueryRow);
+	if(hr==S_OK)
+	{
+		int32 oid;
+		hr = spQueryRow.GetOID(oid);
+		if(hr!=S_OK)
+			return mapnik::feature_ptr();
+		mapnik::value_integer fid(oid);
+		feature_ptr feature(feature_factory::create(ctx_,fid));
+		shape_buffer_io::parse_esri_row(feature,&spQueryRow,*tr_);
+		return feature;
+	}
+	// otherwise return an empty feature
+	return mapnik::feature_ptr();
+}
+
+//建立按范围查询模板类
+template class filegdb_featureset<mapnik::filter_in_box>;
+//建立点位置查询模板类
+template class filegdb_featureset<mapnik::filter_at_point>;
