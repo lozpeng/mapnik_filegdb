@@ -19,12 +19,14 @@ using mapnik::context_ptr;
 
 template <typename filterT>
 filegdb_featureset<filterT>::filegdb_featureset(filterT const& filter,
-				box2d<double> const& box,Table* gdbTable,int row_limit,std::string const& encoding)
+				box2d<double> const& box,Table* gdbTable,int row_limit,
+				std::string const& encoding,std::string where_clause)
 		:filter_(filter),
 		row_limit_(row_limit),
 		box_(box),
 		ctx_(boost::make_shared<mapnik::context_type>()),
-		tr_(new transcoder(encoding))
+		tr_(new transcoder(encoding)),
+		where_clause_(where_clause)
 {
 	FileGDBAPI::Envelope envelope;
 	envelope.xMin =box_.minx();// -118.219;
@@ -35,7 +37,22 @@ filegdb_featureset<filterT>::filegdb_featureset(filterT const& filter,
 	//根据条件检索出数据用于获取每一条记录
 	try
 	{
-		hr = gdbTable->Search(L"*", L"", envelope, true, spQueryRows);
+		if(!where_clause_.empty())
+		{
+			std::wstring w_clause;
+			std::string str(where_clause_);
+			str = gbk_to_utf8(str);
+			w_clause = to_vwstring(w_clause,str);
+			//where 条件最好调整为UTF-8编码格式
+			hr = gdbTable->Search(L"*", w_clause, envelope, true, spQueryRows);
+			if (hr != S_OK)
+			{
+				//数据查询失败
+			}
+		}
+		else{
+			hr = gdbTable->Search(L"*", L"", envelope, true, spQueryRows);
+		}
 		if (hr != S_OK)
 		{
 			//spQueryRows =NULL;	

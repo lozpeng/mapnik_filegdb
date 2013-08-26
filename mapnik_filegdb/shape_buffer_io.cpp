@@ -27,7 +27,7 @@ shape_buffer_io::shape_buffer_io()
 shape_buffer_io::~shape_buffer_io(){}
 
 
-//∂¡»°∑∂Œß
+//∂¡»°∑∂Œß,
 void shape_buffer_io::read_bbox(Row* esri_row,mapnik::box2d<double> & bbox){
 	FileGDBAPI::ShapeBuffer shap_buffer;
 	fgdbError hr = esri_row->GetGeometry(shap_buffer);
@@ -35,6 +35,7 @@ void shape_buffer_io::read_bbox(Row* esri_row,mapnik::box2d<double> & bbox){
 	{
 		return ;
 	}
+	//TODO:: 
 	//shap_buffer.
 }
 ///
@@ -146,7 +147,7 @@ void shape_buffer_io::add_attributes(Row* esri_row,mapnik::feature_impl & f,mapn
 						break;
 					}
 				case fieldTypeSmallInteger:
-					 fieldTypeInteger:
+				case fieldTypeInteger:
 					{
 						int32 i_val;
 						hr = esri_row->GetInteger(tmpName,i_val);

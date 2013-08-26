@@ -4,7 +4,7 @@
 //file gdb
 #include "FileGDBAPI.h"
 //stl
-#include <string.h>
+#include <string>
 #include <iostream>
 
 //boost
@@ -22,12 +22,16 @@
 //中文字符问题
 #include <locale.h>
 #include "fgdb_common.h"
+
+//stl
+#include <vector>
 // namespaces
 using namespace std;
 using namespace FileGDBAPI;
 //ESRI FileGDB shared ptr object
 
-
+//定义图层名称类型
+typedef vector<std::string> layer_names;
 //文件型数据库连接与管理类
 class filegdb_geodatabase
 {
@@ -110,6 +114,52 @@ public :
 			return false;
 		}
 	}
+	//从打开的数据库中获取所有的图层名称，即数据的全路径
+	layer_names GetAllFeatureClasses()
+	{
+		layer_names lyrs;
+		std::vector<std::wstring> childDatasets;
+		std::vector<std::wstring> childFeatureClass;
+		fgdbError hr = fileGdb_.GetChildDatasets(L"\\",L"Feature Dataset",childDatasets);
+		if(hr == S_OK)
+		{
+			int fds_size = (int)childDatasets.size();
+			for(int indx  = 0; indx < fds_size; indx++)
+			{
+				std::wstring ds_name = (std::wstring)childDatasets.at(indx);
+				hr = fileGdb_.GetChildDatasets(ds_name,L"Feature Class",childFeatureClass);
+				if(hr!=S_OK)
+					continue;
+				else
+				{
+					int fcls_count = (int)childFeatureClass.size();
+					if(fcls_count <= 0)continue;
+					for(int j = 0; j<fcls_count; j++)
+					{
+						wstring fc_name =childFeatureClass.at(j);
+						string fc;
+						fc = to_vstring(fc,fc_name);
+						lyrs.push_back(fc);
+					}
+				}
+			}
+		}
+		//FeatureClasses not in the DataSets
+		hr = fileGdb_.GetChildDatasets(L"\\",L"Feature Class",childFeatureClass);
+		if(hr == S_OK)
+		{
+			int fcls_count = (int)childFeatureClass.size();
+			if(fcls_count <= 0)return lyrs;
+			for(int j = 0; j<fcls_count; j++)
+			{
+				wstring fc_name1 = childFeatureClass.at(j);
+				string fc2;
+				fc2 = to_vstring(fc2,fc_name1);
+				lyrs.push_back(fc2);
+			}
+		}
+		return lyrs;
+	}	
 	std::string get_dbPath()
 	{
 		return gdbPath_;

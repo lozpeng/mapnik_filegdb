@@ -31,7 +31,8 @@ public:
     // this constructor can have any arguments you need
     //filegdb_featureset(Table* gdbTable,mapnik::box2d<double> const& box);
 	//通过传递过滤器进行数据处理
-	filegdb_featureset(filterT const& filter,mapnik::box2d<double> const& box,Table* gdbTable,int row_limit,std::string const& encoding);
+	filegdb_featureset(filterT const& filter,mapnik::box2d<double> const& box,
+			Table* gdbTable,int row_limit,std::string const& encoding,std::string where_clause);
 	// desctructor
     virtual ~filegdb_featureset();
 
@@ -49,8 +50,10 @@ private:
 	EnumRows spQueryRows;
 	//过滤条件
 	filterT filter_;
-
+	//读取限定行
 	mapnik::value_integer row_limit_; 
+	//数据查询限定条件
+	std::string where_clause_;
 
 };
 #endif // FILEGDB_FEATURESET_HPP

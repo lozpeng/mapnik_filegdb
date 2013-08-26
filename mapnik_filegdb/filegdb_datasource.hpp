@@ -111,6 +111,8 @@ private:
 	const int row_limit_;
 	//esri几何类型字符串
 	std::string geo_type;
+	//where过滤条件用来限定数据读取量
+	std::string where_clause;
 private://functions
 	// recommended - do intialization in a so-named init function
 	// to reduce code in constructor

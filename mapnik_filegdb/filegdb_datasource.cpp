@@ -5,7 +5,7 @@
 #include <boost/make_shared.hpp>
 
 //char encode 
-#include <unicode\ucnv.h>
+#include <unicode/ucnv.h>
 // mapnik
 #include <mapnik/debug.hpp>
 #include <mapnik/util/fs.hpp>
@@ -35,11 +35,13 @@ DATASOURCE_PLUGIN(filegdb_datasource)
 //params["gdbpath"]="e:\\test.gdb"
 //params["lyrpath"] ="/F_V_P_PROVINCE_2012";
 //params["type"]="filegdb";
+//params["where"]="field=value or field2";
 //
 filegdb_datasource::filegdb_datasource(parameters const& params)
 :   datasource(params),
     desc_(*params.get<std::string>("type"), *params.get<std::string>("encoding","utf-8")),
 	row_limit_(*params.get<mapnik::value_integer>("row_limit",0)),
+	where_clause(*params.get<std::string>("where","utf-8")),
     extent_()
 {
     this->init(params);
@@ -56,10 +58,11 @@ void filegdb_datasource::init(mapnik::parameters const& params)
 	//打开所需的表格，即指定的存储空间数据的表格,open the table this data source linked to 
 	try
 	{
-		gdbTable_ = new Table;
+		gdbTable_= new Table;
 		bool opened = gdb_->open_table(esriTablePath_,*gdbTable_);
 		if(!opened)
 		{
+			MAPNIK_LOG_ERROR(gdb_) << "ESRI FileGDB Plugin error on open vector table! ";
 			delete gdbTable_;
 			return ;
 		}
@@ -257,7 +260,7 @@ mapnik::featureset_ptr filegdb_datasource::features(mapnik::query const& q) cons
 	 mapnik::progress_timer __stats__(std::clog, "filegdb_datasource::features");
 #endif
 	 filter_in_box filter(q.get_bbox());
-	 return featureset_ptr(new filegdb_featureset<filter_in_box>(filter,q.get_bbox(),gdbTable_,row_limit_,desc_.get_encoding()));
+	 return featureset_ptr(new filegdb_featureset<filter_in_box>(filter,q.get_bbox(),gdbTable_,row_limit_,desc_.get_encoding(),where_clause));
 }
 
 mapnik::featureset_ptr filegdb_datasource::features_at_point(mapnik::coord2d const& pt, double tol) const
@@ -266,5 +269,5 @@ mapnik::featureset_ptr filegdb_datasource::features_at_point(mapnik::coord2d con
     mapnik::progress_timer __stats__(std::clog, "filegdb_datasource::features_at_point");
 #endif
 	filter_at_point filter(pt,tol);
-	return featureset_ptr(new filegdb_featureset<filter_at_point>(filter,filter.box_,gdbTable_,row_limit_,desc_.get_encoding()));
+	return featureset_ptr(new filegdb_featureset<filter_at_point>(filter,filter.box_,gdbTable_,row_limit_,desc_.get_encoding(),where_clause));
 }

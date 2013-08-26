@@ -53,6 +53,7 @@ static std::string& to_vstring(std::string& dest, std::wstring const & src)
 
 	return dest;
 };
+
 // 把一个string转化为wstring
 static std::wstring& to_vwstring(std::wstring& dest, std::string const & src)
 {
@@ -65,5 +66,5 @@ static std::wstring& to_vwstring(std::wstring& dest, std::string const & src)
 	dest.assign(tmp.begin(), tmp.end() - 1);
 
 	return dest;
-}
+};
 #endif //FGDB_PLUGIN_COMMON_H
